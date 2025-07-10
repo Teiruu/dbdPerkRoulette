@@ -1,14 +1,9 @@
-"""
-AnimatedButton: a QPushButton subclass that transitions background
-color on hover and can play optional hover/click sounds.
-"""
-
 from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtCore import Qt, QPropertyAnimation, pyqtProperty
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore    import Qt, QPropertyAnimation, pyqtProperty
+from PyQt6.QtGui     import QColor
 
 class AnimatedButton(QPushButton):
-    """Button with a smooth hover-color animation and sound effects."""
+    """Button with smooth hover colors and sound effects."""
 
     def __init__(self, text,
                  hover_color,
@@ -18,12 +13,11 @@ class AnimatedButton(QPushButton):
                  click_sound=None):
         super().__init__(text)
         self._hover_progress = 0.0
-        self.hover_color = QColor(hover_color)
-        self.base_color = QColor(base_color)
-        self.text_color = text_color
-
-        self.hover_sound = hover_sound
-        self.click_sound = click_sound
+        self.hover_color     = QColor(hover_color)
+        self.base_color      = QColor(base_color)
+        self.text_color      = text_color
+        self.hover_sound     = hover_sound
+        self.click_sound     = click_sound
 
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.anim = QPropertyAnimation(self, b"hoverProgress", self)
@@ -33,7 +27,6 @@ class AnimatedButton(QPushButton):
         self._update_style()
 
     def enterEvent(self, event):
-        """Animate to hover color and play hover sound."""
         self.anim.stop()
         self.anim.setStartValue(self._hover_progress)
         self.anim.setEndValue(1.0)
@@ -43,7 +36,6 @@ class AnimatedButton(QPushButton):
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        """Animate back to base color."""
         self.anim.stop()
         self.anim.setStartValue(self._hover_progress)
         self.anim.setEndValue(0.0)
@@ -51,7 +43,6 @@ class AnimatedButton(QPushButton):
         super().leaveEvent(event)
 
     def _play_click_sound(self):
-        """Play click sound if available."""
         if self.click_sound:
             self.click_sound.play()
 
@@ -65,10 +56,9 @@ class AnimatedButton(QPushButton):
     hoverProgress = pyqtProperty(float, fget=get_hover_progress, fset=set_hover_progress)
 
     def _update_style(self):
-        """Recompute background color based on hover progress."""
-        r = int(self.base_color.red() + (self.hover_color.red() - self.base_color.red()) * self._hover_progress)
+        r = int(self.base_color.red()   + (self.hover_color.red()   - self.base_color.red())   * self._hover_progress)
         g = int(self.base_color.green() + (self.hover_color.green() - self.base_color.green()) * self._hover_progress)
-        b = int(self.base_color.blue() + (self.hover_color.blue() - self.base_color.blue()) * self._hover_progress)
+        b = int(self.base_color.blue()  + (self.hover_color.blue()  - self.base_color.blue())  * self._hover_progress)
         bg = f"rgb({r},{g},{b})"
         self.setStyleSheet(f"""
             QPushButton {{
