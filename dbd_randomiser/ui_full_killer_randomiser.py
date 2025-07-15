@@ -87,7 +87,7 @@ class FullDisplay(QWidget):
         spin_all.clicked.connect(self._start)
 
         back = AnimatedButton(
-            "Back to Menu",
+            "Back",
             hover_color="#555", base_color="#111", text_color="white",
             hover_sound=hover_sound, click_sound=click_sound
         )

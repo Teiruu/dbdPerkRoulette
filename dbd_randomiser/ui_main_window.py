@@ -1,8 +1,3 @@
-"""
-Main application window for DBD Perk Roulette.
-Handles background animation, audio, and navigation.
-"""
-
 import os
 import pygame
 from PyQt6.QtWidgets import QMainWindow, QWidget, QLabel, QVBoxLayout, QPushButton
@@ -18,14 +13,14 @@ from ui_full_killer_randomiser   import FullDisplay  # renamed
 WINDOW_WIDTH  = 1000
 WINDOW_HEIGHT = 600
 
-GIF_PATHS      = ["images/menu/fog.gif", "images/menu/fogreverse.gif"]
-GIF_INTERVAL   = 10_000
-GIF_PAUSE      = 500
+GIF_PATHS    = ["images/menu/fog.gif", "images/menu/fogreverse.gif"]
+GIF_INTERVAL = 10_000
+GIF_PAUSE    = 500
 
-THEME_MUSIC    = "media/dbdtheme.mp3"
-SFX_HOVER      = "media/buttonhover.mp3"
-SFX_CLICK      = "media/buttonselect.mp3"
-DEFAULT_VOL    = 0.1
+THEME_MUSIC  = "media/dbdtheme.mp3"
+SFX_HOVER    = "media/buttonhover.mp3"
+SFX_CLICK    = "media/buttonselect.mp3"
+DEFAULT_VOL  = 0.1
 
 class MainWindow(QMainWindow):
     """Primary window: background, audio, and menu navigation."""
@@ -34,6 +29,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("DBD Perk Roulette")
         self.setGeometry(100, 100, WINDOW_WIDTH, WINDOW_HEIGHT)
+
+        # restore these methods so _setup_background actually exists:
         self._setup_background()
         self._setup_audio()
         self._setup_ui_layer()
@@ -42,6 +39,9 @@ class MainWindow(QMainWindow):
         self.is_muted = False
         self.show_main_menu()
 
+    # ────────────────────────────────────────────────────────────────────────
+    # Background / Animation
+    # ────────────────────────────────────────────────────────────────────────
     def _setup_background(self):
         self.gif_index = 0
         self.movie_label = QLabel(self)
@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
         self.movie = QMovie(GIF_PATHS[0])
         self.movie_label.setMovie(self.movie)
         self.movie.start()
+
         self.gif_timer = QTimer(self)
         self.gif_timer.timeout.connect(self._pause_and_switch_gif)
         self.gif_timer.start(GIF_INTERVAL)
@@ -65,6 +66,9 @@ class MainWindow(QMainWindow):
         self.movie.start()
         self.gif_timer.start(GIF_INTERVAL)
 
+    # ────────────────────────────────────────────────────────────────────────
+    # Audio
+    # ────────────────────────────────────────────────────────────────────────
     def _setup_audio(self):
         pygame.mixer.init()
         try:
@@ -83,6 +87,9 @@ class MainWindow(QMainWindow):
             print("[WARNING] Could not load SFX.")
             self.sfx_hover = self.sfx_click = None
 
+    # ────────────────────────────────────────────────────────────────────────
+    # UI Layer & Footer
+    # ────────────────────────────────────────────────────────────────────────
     def _setup_ui_layer(self):
         self.ui_layer = QWidget(self)
         self.ui_layer.setGeometry(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -140,12 +147,18 @@ class MainWindow(QMainWindow):
             self.height() - self.mute_btn.height() - 10
         )
 
+    # ────────────────────────────────────────────────────────────────────────
+    # Helpers
+    # ────────────────────────────────────────────────────────────────────────
     def clear_overlay_layout(self):
         while self.ui_layout.count():
             item = self.ui_layout.takeAt(0)
             if widget := item.widget():
                 widget.setParent(None)
 
+    # ────────────────────────────────────────────────────────────────────────
+    # Main Menu
+    # ────────────────────────────────────────────────────────────────────────
     def show_main_menu(self):
         self.clear_overlay_layout()
 
@@ -169,22 +182,16 @@ class MainWindow(QMainWindow):
             "Survivor Roulette", hover_color="#405c94",
             hover_sound=self.sfx_hover, click_sound=self.sfx_click
         )
+
         killer_btn.clicked.connect(self.show_killer_menu)
-        survivor_btn.clicked.connect(
-            lambda: self._load_perk_roulette("images/survivor_perks")
-        )
+        survivor_btn.clicked.connect(self.show_survivor_menu)
+
         self.ui_layout.addWidget(killer_btn)
         self.ui_layout.addWidget(survivor_btn)
 
-    def _load_perk_roulette(self, folder):
-        self.clear_overlay_layout()
-        display = PerkDisplay(
-            folder, self.show_main_menu,
-            hover_sound=self.sfx_hover,
-            click_sound=self.sfx_click
-        )
-        self.ui_layout.addWidget(display)
-
+    # ────────────────────────────────────────────────────────────────────────
+    # Killer Sub‑Menu
+    # ────────────────────────────────────────────────────────────────────────
     def show_killer_menu(self):
         self.clear_overlay_layout()
 
@@ -194,15 +201,13 @@ class MainWindow(QMainWindow):
 
         pk = AnimatedButton("Perk Randomiser", hover_color="#982c1c",
                             hover_sound=self.sfx_hover, click_sound=self.sfx_click)
-        pk.clicked.connect(
-            lambda: self._load_perk_roulette("images/killer_perks")
-        )
+        pk.clicked.connect(self.show_killer_perk_roulette)
 
         fb = AnimatedButton("Full Randomiser", hover_color="#982c1c",
                             hover_sound=self.sfx_hover, click_sound=self.sfx_click)
         fb.clicked.connect(self.show_full_randomiser)
 
-        back = AnimatedButton("Back to Main Menu", hover_color="#555",
+        back = AnimatedButton("Back", hover_color="#555",
                               base_color="#111", text_color="white",
                               hover_sound=self.sfx_hover,
                               click_sound=self.sfx_click)
@@ -210,7 +215,8 @@ class MainWindow(QMainWindow):
 
         for w in (kb, pk, fb, back):
             w.setFixedSize(250, 50)
-            self.ui_layout.addWidget(w, alignment=Qt.AlignmentFlag.AlignCenter)
+            self.ui_layout.addWidget(w,
+                                     alignment=Qt.AlignmentFlag.AlignCenter)
 
     def show_killer_randomiser(self):
         self.clear_overlay_layout()
@@ -229,3 +235,62 @@ class MainWindow(QMainWindow):
             click_sound=self.sfx_click
         )
         self.ui_layout.addWidget(fd)
+
+    # ────────────────────────────────────────────────────────────────────────
+    # Survivor Sub‑Menu
+    # ────────────────────────────────────────────────────────────────────────
+    def show_survivor_menu(self):
+        self.clear_overlay_layout()
+
+        perk_btn = AnimatedButton("Perk Roulette",
+            hover_color="#405c94",
+            hover_sound=self.sfx_hover, click_sound=self.sfx_click)
+        perk_btn.clicked.connect(self.show_survivor_perk_roulette)
+
+        full_btn = AnimatedButton("Full Randomise",
+            hover_color="#405c94",
+            hover_sound=self.sfx_hover, click_sound=self.sfx_click)
+        full_btn.clicked.connect(self.show_full_survivor_randomiser)
+
+        back = AnimatedButton("Back",
+            hover_color="#555", base_color="#111", text_color="white",
+            hover_sound=self.sfx_hover, click_sound=self.sfx_click)
+        back.clicked.connect(self.show_main_menu)
+
+        for w in (perk_btn, full_btn, back):
+            w.setFixedSize(250, 50)
+            self.ui_layout.addWidget(w,
+                                     alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def show_full_survivor_randomiser(self):
+        self.clear_overlay_layout()
+        from ui_full_survivor_randomiser import FullSurvivorDisplay
+        fd = FullSurvivorDisplay(
+            back_callback=self.show_survivor_menu,
+            hover_sound=self.sfx_hover,
+            click_sound=self.sfx_click
+        )
+        self.ui_layout.addWidget(fd)
+
+    # ────────────────────────────────────────────────────────────────────────
+    # Perk‑Roulette helpers (so “Back” returns to the right submenu)
+    # ────────────────────────────────────────────────────────────────────────
+    def show_killer_perk_roulette(self):
+        self.clear_overlay_layout()
+        disp = PerkDisplay(
+            "images/killer_perks",
+            back_callback=self.show_killer_menu,
+            hover_sound=self.sfx_hover,
+            click_sound=self.sfx_click
+        )
+        self.ui_layout.addWidget(disp)
+
+    def show_survivor_perk_roulette(self):
+        self.clear_overlay_layout()
+        disp = PerkDisplay(
+            "images/survivor_perks",
+            back_callback=self.show_survivor_menu,
+            hover_sound=self.sfx_hover,
+            click_sound=self.sfx_click
+        )
+        self.ui_layout.addWidget(disp)

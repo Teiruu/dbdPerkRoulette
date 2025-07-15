@@ -117,15 +117,21 @@ class PerkDisplay(QWidget):
         main_layout.addSpacing(30)
 
         # ── Buttons ─────────────────────────────────────────────────────────
+        spin_hover = "#405c94" if "survivor_perks" in self.perk_folder else "#982c1c"
+
         self.spin_button = AnimatedButton(
-            "Spin", hover_color="#982c1c", base_color="#222", text_color="white",
-            hover_sound=self.hover_sound, click_sound=self.click_sound
+            "Spin",
+            hover_color=spin_hover,
+            base_color="#222",
+            text_color="white",
+            hover_sound=self.hover_sound,
+            click_sound=self.click_sound
         )
         self.spin_button.setFixedSize(200, 50)
         self.spin_button.clicked.connect(self._start_spin)
 
         back_button = AnimatedButton(
-            "Back to Menu", hover_color="#555", base_color="#111", text_color="white",
+            "Back", hover_color="#555", base_color="#111", text_color="white",
             hover_sound=self.hover_sound, click_sound=self.click_sound
         )
         back_button.setFixedSize(150, 50)
