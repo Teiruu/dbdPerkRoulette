@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QPushButton
-from PyQt6.QtCore    import Qt, QPropertyAnimation, pyqtProperty
+from PyQt6.QtWidgets import QPushButton, QLabel
+from PyQt6.QtCore    import Qt, QPropertyAnimation, pyqtProperty, pyqtSignal
 from PyQt6.QtGui     import QColor
 
 class AnimatedButton(QPushButton):
@@ -70,3 +70,9 @@ class AnimatedButton(QPushButton):
                 border: 1px solid rgba(255,255,255,0.1);
             }}
         """)
+
+class ClickableLabel(QLabel):
+    clicked = pyqtSignal()
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.clicked.emit()

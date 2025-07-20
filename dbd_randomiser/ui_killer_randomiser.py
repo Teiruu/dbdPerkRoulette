@@ -1,24 +1,19 @@
-import os
-import random
+import os, random
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
 from PyQt6.QtCore    import Qt, QTimer
 from PyQt6.QtGui     import QPixmap
 
-from widgets import AnimatedButton
+from widgets import AnimatedButton, ClickableLabel
 from utils    import format_perk_name
 
-SPIN_INTERVAL = 100  # ms/frame
-SPIN_STEPS    = 20   # frames per phase
+SPIN_INTERVAL = 100
+SPIN_STEPS    = 20
 
 def image_path(*parts):
-    """Absolute path builder into images/."""
     base = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base, "images", *parts)
 
-
 class KillerDisplay(QWidget):
-    """Spin a killer portrait → name on left, then two addons → names on right."""
-
     def __init__(self, back_callback, hover_sound=None, click_sound=None):
         super().__init__()
         self.back_cb     = back_callback
@@ -26,30 +21,21 @@ class KillerDisplay(QWidget):
         self.click_sound = click_sound
 
         # ─── Data ────────────────────────────────────────────────────────
-        self.killer_dir  = image_path("killers")
-        self.addons_root = image_path("killer_addons")
-        self.killer_files = [
-            f for f in os.listdir(self.killer_dir)
-            if f.lower().endswith(".png")
-        ]
-        if not self.killer_files:
-            raise RuntimeError(f"No killer images in {self.killer_dir!r}")
+        self.killer_dir   = image_path("killers")
+        self.addons_root  = image_path("killer_addons")
+        self.killer_files = [f for f in os.listdir(self.killer_dir) if f.lower().endswith(".png")]
 
         # placeholder graphic
-        self.placeholder = QPixmap(image_path("killer_perks", "helpLoadingKiller.png"))\
-            .scaled(220, 220,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation)
+        self.placeholder = QPixmap(image_path("killer_perks","helpLoadingKiller.png"))\
+            .scaled(220,220,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
 
         # ─── UI ───────────────────────────────────────────────────────────
         self.setStyleSheet("background: transparent;")
         root = QVBoxLayout(self)
         root.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # ─── Content row: portrait+name (left) and addons (right) ───────
-        content = QHBoxLayout()
-        content.setSpacing(60)
-        content.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Content: portrait & name | addons
+        content = QHBoxLayout(); content.setSpacing(60); content.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # 1) Portrait + Name container
         self.portrait_container = QWidget()
@@ -58,7 +44,7 @@ class KillerDisplay(QWidget):
         pc.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         frame = QFrame()
-        frame.setFixedSize(260, 260)
+        frame.setFixedSize(260,260)
         frame.setStyleSheet("""
             QFrame { background-color: rgba(0,0,0,150);
                      border: 2px solid #222;
@@ -68,17 +54,20 @@ class KillerDisplay(QWidget):
         fl.setContentsMargins(0,0,0,0)
         fl.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.portrait_label = QLabel()
-        self.portrait_label.setFixedSize(220, 220)
+        # ← make this clickable
+        self.portrait_label = ClickableLabel()
+        self.portrait_label.setFixedSize(220,220)
         self.portrait_label.setPixmap(self.placeholder)
         self.portrait_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.portrait_label.setToolTip("Click to reroll killer (resets its addons)")
+        self.portrait_label.clicked.connect(self._reroll_killer)
         fl.addWidget(self.portrait_label)
 
         pc.addWidget(frame)
         pc.addSpacing(5)
 
         self.name_label = QLabel("", self)
-        self.name_label.setFixedSize(260, 40)
+        self.name_label.setFixedSize(260,40)
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.name_label.setWordWrap(True)
         self.name_label.setStyleSheet("""
@@ -93,23 +82,20 @@ class KillerDisplay(QWidget):
 
         content.addWidget(self.portrait_container)
 
-        # 2) Addons column
-        addons_v = QVBoxLayout()
-        addons_v.setSpacing(40)
-        addons_v.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
+        # 2) Addons column (now also stores containers)
+        addons_v = QVBoxLayout(); addons_v.setSpacing(40); addons_v.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.addon_containers   = []
         self.addon_labels       = []
         self.addon_name_labels  = []
 
-        for _ in range(2):
+        for idx in range(2):
             ctn = QWidget()
-            cl = QVBoxLayout(ctn)
+            cl  = QVBoxLayout(ctn)
             cl.setContentsMargins(0,0,0,0)
             cl.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
             af = QFrame()
-            af.setFixedSize(140, 140)
+            af.setFixedSize(140,140)
             af.setStyleSheet("""
                 QFrame { background-color: rgba(0,0,0,150);
                          border: 2px solid #222;
@@ -119,18 +105,23 @@ class KillerDisplay(QWidget):
             afl.setContentsMargins(0,0,0,0)
             afl.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-            icon = QLabel()
-            icon.setFixedSize(110, 110)
-            icon.setPixmap(self.placeholder.scaled(
-                110, 110,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            ))
-            icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            afl.addWidget(icon)
+            # ← clickable addon icon
+            ico = ClickableLabel()
+            ico.setFixedSize(110,110)
+            ico.setPixmap(
+                self.placeholder.scaled(
+                    110, 110,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+            )
+            ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            ico.setToolTip("Click to reroll this addon")
+            ico.clicked.connect(lambda *args, i=idx: self._reroll_addon(i))
+            afl.addWidget(ico)
 
             name = QLabel("", self)
-            name.setFixedSize(140, 40)
+            name.setFixedSize(140,40)
             name.setAlignment(Qt.AlignmentFlag.AlignCenter)
             name.setWordWrap(True)
             name.setStyleSheet("""
@@ -148,11 +139,10 @@ class KillerDisplay(QWidget):
 
             addons_v.addWidget(ctn)
             self.addon_containers.append(ctn)
-            self.addon_labels.append(icon)
+            self.addon_labels.append(ico)
             self.addon_name_labels.append(name)
 
         content.addLayout(addons_v)
-
         root.addLayout(content)
         root.addSpacing(30)
 
@@ -161,31 +151,28 @@ class KillerDisplay(QWidget):
             "Spin", hover_color="#982c1c", base_color="#222", text_color="white",
             hover_sound=self.hover_sound, click_sound=self.click_sound
         )
-        spin_btn.setFixedSize(220, 50)
+        spin_btn.setFixedSize(220,50)
         spin_btn.clicked.connect(self._start_portrait)
-        self.spin_button = spin_btn
+        root.addWidget(spin_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        root.addSpacing(8)
 
         back_btn = AnimatedButton(
             "Back", hover_color="#555", base_color="#111", text_color="white",
             hover_sound=self.hover_sound, click_sound=self.click_sound
         )
-        back_btn.setFixedSize(150, 50)
+        back_btn.setFixedSize(150,50)
         back_btn.clicked.connect(self.back_cb)
+        root.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        root.addWidget(self.spin_button, alignment=Qt.AlignmentFlag.AlignCenter)
-        root.addSpacing(8)
-        root.addWidget(back_btn,      alignment=Qt.AlignmentFlag.AlignCenter)
+        tip = QLabel("Tip: click any icon above to reroll it individually.", self)
+        tip.setStyleSheet("color: #ccc; font-size: 8pt;")
+        root.addWidget(tip, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # ─── Timers & Counters ─────────────────────────────────────────
         self._portrait_counter = 0
         self._addon_counter    = 0
-
-        self.portrait_timer = QTimer(self)
-        self.portrait_timer.timeout.connect(self._animate_portrait)
-
-        self.addon_timer = QTimer(self)
-        self.addon_timer.timeout.connect(self._animate_addons)
-
+        self.portrait_timer    = QTimer(self); self.portrait_timer.timeout.connect(self._animate_portrait)
+        self.addon_timer       = QTimer(self); self.addon_timer.timeout.connect(self._animate_addons)
 
     def _start_portrait(self):
         """Begin spinning portrait only."""
@@ -263,5 +250,24 @@ class KillerDisplay(QWidget):
             )
             name_lbl.setText(format_perk_name(fn))
 
+    def _reroll_killer(self):
+        pick = random.choice(self.killer_files)
+        pix  = QPixmap(os.path.join(self.killer_dir, pick))\
+               .scaled(220,220,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
+        self.portrait_label.setPixmap(pix)
+        self.name_label.setText(format_perk_name(pick))
+        for i in (0,1):
+            self._reroll_addon(i)
 
+    def _reroll_addon(self, idx):
+        key    = self.name_label.text().replace(" ", "")
+        folder = os.path.join(self.addons_root, key)
+        if not os.path.isdir(folder):
+            return
+        files = [f for f in os.listdir(folder) if f.lower().endswith(".png")]
+        fn    = random.choice(files)
+        pix   = QPixmap(os.path.join(folder, fn))\
+                .scaled(110,110,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
+        self.addon_labels[idx].setPixmap(pix)
+        self.addon_name_labels[idx].setText(format_perk_name(fn))
 
