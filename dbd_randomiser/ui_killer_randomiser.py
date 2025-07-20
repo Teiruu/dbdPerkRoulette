@@ -19,6 +19,8 @@ class KillerDisplay(QWidget):
         self.back_cb     = back_callback
         self.hover_sound = hover_sound
         self.click_sound = click_sound
+        # track current addon files so we can avoid duplicates
+        self._addon_files = [None, None]
 
         # ─── Data ────────────────────────────────────────────────────────
         self.killer_dir   = image_path("killers")
@@ -239,6 +241,7 @@ class KillerDisplay(QWidget):
             return
         files = [f for f in os.listdir(folder) if f.lower().endswith(".png")]
         picks = random.sample(files, min(2, len(files)))
+        self._addon_files = picks
         for icon, name_lbl, fn in zip(self.addon_labels,
                                       self.addon_name_labels,
                                       picks):
@@ -265,7 +268,12 @@ class KillerDisplay(QWidget):
         if not os.path.isdir(folder):
             return
         files = [f for f in os.listdir(folder) if f.lower().endswith(".png")]
-        fn    = random.choice(files)
+        # avoid picking the one in the *other* slot
+        other_idx = 1 - idx
+        other_fn = self._addon_files[other_idx]
+        pool = [f for f in files if f != other_fn] or files
+        fn = random.choice(pool)
+        self._addon_files[idx] = fn
         pix   = QPixmap(os.path.join(folder, fn))\
                 .scaled(110,110,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
         self.addon_labels[idx].setPixmap(pix)

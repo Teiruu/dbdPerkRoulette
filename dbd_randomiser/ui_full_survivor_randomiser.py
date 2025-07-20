@@ -29,6 +29,8 @@ class FullSurvivorDisplay(QWidget):
         self.back_cb     = back_callback
         self.hover_sound = hover_sound
         self.click_sound = click_sound
+        # keep track of the *current* two addon‑files
+        self._picked_addons = [None, None]
 
         # Data folders
         self.survivor_folder = image_path("survivors")
@@ -213,6 +215,8 @@ class FullSurvivorDisplay(QWidget):
             self.item_icon.setPixmap(pix)
             if self._cnt >= SPIN_STEPS:
                 self._temp_item = choice
+                # make individual‐addon rerolls work
+                self._picked_item = os.path.splitext(choice)[0]
                 self.item_txt.setText(format_perk_name(choice))
                 # reset addons to placeholder
                 for ico, txt in zip(self.addon_icons, self.addon_txts):
@@ -231,9 +235,13 @@ class FullSurvivorDisplay(QWidget):
                 ico.setPixmap(pix)
             if self._cnt >= SPIN_STEPS:
                 picks = random.sample(files, min(2, len(files)))
+                # remember them so they stay unique
+                self._picked_addons = picks
                 for ico, txt, fn in zip(self.addon_icons, self.addon_txts, picks):
-                    pix = QPixmap(os.path.join(folder, fn))\
-                          .scaled(IMAGE_SIZE, IMAGE_SIZE, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    pix = QPixmap(os.path.join(folder, fn)) \
+                        .scaled(IMAGE_SIZE, IMAGE_SIZE,
+                                Qt.AspectRatioMode.KeepAspectRatio,
+                                Qt.TransformationMode.SmoothTransformation)
                     ico.setPixmap(pix)
                     txt.setText(format_perk_name(fn))
                 self._phase, self._cnt = 4, 0
@@ -346,7 +354,12 @@ class FullSurvivorDisplay(QWidget):
     def _reroll_addon(self, idx):
         folder = os.path.join(self.addons_root, self._picked_item)
         files  = [f for f in os.listdir(folder) if f.lower().endswith(".png")]
-        fn     = random.choice(files)
+        # never pick the same as the *other* addon
+        other_idx = 1 - idx
+        other_fn = self._picked_addons[other_idx]
+        pool = [f for f in files if f != other_fn] or files
+        fn = random.choice(pool)
+        self._picked_addons[idx] = fn
         pix    = QPixmap(os.path.join(folder, fn))\
                  .scaled(IMAGE_SIZE, IMAGE_SIZE, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
         self.addon_icons[idx].setPixmap(pix)
